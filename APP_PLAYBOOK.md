@@ -498,6 +498,12 @@ Any step a person has to do by hand goes into the ROADMAP's "Waiting on you" lis
   - Each one updates `ROADMAP.md` (and this playbook or the profile, if it taught something).
   - Each one that changes something a user would notice adds a line under `## Unreleased` in `CHANGELOG.md`.
   - The description is only the content (what changed, how it was checked). **No attribution lines:** no "Requested by" line or link back to the chat or project thread that asked for it, and no "Generated with" tool footer or session link. Leave them out even when a tool's default template adds them.
+- **Mock-ups before UI/UX changes:**
+  - Any change a user would see in the layout or flow (a new screen, sheet or section, or a change to how one behaves) starts with mock-ups, not code. A copy or colour tweak doesn't need one.
+  - Draw them in the app's own tokens and components (a static HTML page rendered at phone size works), one image per state: the entry point, each sheet or tab, empty and edge cases such as multiple currencies or a member who hasn't joined.
+  - Show only what a user would see. Put design notes in the message, not on the screen, or they read as UI text.
+  - Agree them with the owner, then build. Iterate on the mock-ups, which is cheaper than iterating on a PR. The PR then shows screenshots of the built version from the real app.
+  - *Example (Splitly):* a tappable balance card went through three mock-up rounds and a scope split into two PRs before any code was written.
 - **Commits:**
   - Authored as `{{GIT_AUTHOR}}` (set in each app's `AGENTS.md`).
   - **No `Co-Authored-By` lines.**
@@ -544,7 +550,7 @@ Stack-specific gotchas are in the profile's P8.
 - Normalize shared entities, and store third-party IDs with a `*_fetched_at`.
 - Go through the data access layer; keep the shared core free of UI framework imports.
 - Use optimistic UI with a rollback and a watchdog. Return a result object from every mutation.
-- Design at phone width first. Mock up the system before building screens.
+- Design at phone width first. Mock up the system before building screens, and every UI/UX change before building it (§9).
 - Add a kill switch for every paid API, and keep secrets on the server.
 - Record a reason for destructive admin actions, and write the audit entry with them.
 - Add a user-facing changelog line in the same PR as the change.
