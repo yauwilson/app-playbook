@@ -523,6 +523,7 @@ Stack-specific gotchas are in the profile's P8.
 
 - **A side effect hidden in one entry point.** *Example (Travel App):* the first-owner bootstrap ran only when `/admin` was opened, while the menu read the table directly, so the Admin link never showed. Anything that decides "is this user X?" goes through one function that every caller uses.
 - **Don't share one "which sheet is open" state across forms whose saves run in the background.** A save that finishes late closes the sheet you've since opened. Give each open form its own id, and remove only that one when it closes.
+- **A summary screen must compute with the same rule as the detail screen.** If a `<resource>` has a setting that changes how its numbers are worked out, a home or overview screen that recomputes them has to read the same setting through the same function. *Example (Splitly):* Home always simplified debts while the group page respected the group's "simplify debts" setting, so the two named different people as owing you.
 - **Refresh every view of changed data, not just the current screen,** or other tabs and feeds show stale data until their cache expires.
 - **A cleared required text field:** store an empty string, not null, and save a whole settings form in one write; a null once caused a partial save.
 - **"Works locally, fails on hosted"** is usually an unapplied migration, a missing config value, or a function that exists locally but not in the hosted database. CI on a fresh database catches the first and third.

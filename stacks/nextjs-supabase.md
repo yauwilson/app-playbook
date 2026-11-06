@@ -134,6 +134,7 @@ pnpm db:types            # regenerate types.gen.ts after a migration
   - Fix: while a save is in flight, update a bit of the form's own state every 300 ms (`ActionForm`'s `retry` interval). A single nudge on response doesn't work, because it can land before the render suspends.
   - Keep the 12s watchdog as the backstop.
 - **Use `revalidatePath(path, "layout")` in every action that changes `<resource>` data.** Page-only revalidation leaves other tabs and feeds stale for the `staleTimes` window.
+- **Render sheets and dialogs into `document.body` with `createPortal`.** A `position: fixed` overlay inside a `space-y-*` (or any margin-adding) parent is shifted by that margin and leaves an uncovered strip at the top; a parent with `transform` or `filter` breaks it entirely.
 - **CSS comments containing `**/`** (e.g. `app/**/loading.tsx`) end the comment early and break cssnano in production builds.
 - **Vercel `STATIC_BUILD_NO_OUT_DIR`:** set the Framework Preset to **Next.js** (not "Other"), with Root Directory `apps/web`.
 - **`.next/cache/fetch-cache` keeps `unstable_cache` data across dev restarts.** Delete it when testing settings.
