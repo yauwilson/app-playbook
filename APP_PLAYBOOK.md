@@ -494,6 +494,7 @@ Any step a person has to do by hand goes into the ROADMAP's "Waiting on you" lis
 - **PRs:**
   - Small and focused.
   - Each one updates `ROADMAP.md` (and this playbook or the profile, if it taught something).
+  - The description is only the content (what changed, how it was checked). **No attribution lines:** no "Requested by" line or link back to the chat or project thread that asked for it, and no "Generated with" tool footer or session link. Leave them out even when a tool's default template adds them.
 - **Commits:**
   - Authored as `{{GIT_AUTHOR}}` (set in each app's `AGENTS.md`).
   - **No `Co-Authored-By` lines.**
