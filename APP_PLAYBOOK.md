@@ -205,6 +205,7 @@ Everything here is cheap on day one and expensive later. Each item was missed or
    - `ROADMAP.md`, with `[x]` / `[~]` / `[ ]` status and an action plan at the top.
    - `docs/playbook/`: this file and the stack profile, synced from `app-playbook` and never edited in the app.
    - `docs/APP_NOTES.md`: app-only quirks, and lessons to promote to the master.
+   - `CHANGELOG.md`: what shipped and when (§9).
 9. **Workflow rules from the first commit** (§9): small PRs, `dev-<topic>` branches, migration naming.
 10. **Branch protection** once more than one person pushes: require a PR and the CI checks on `main`. (GitHub doesn't enforce rules on private repos on the free plan; until you upgrade, merge only when every check is green.)
 
@@ -474,6 +475,7 @@ Built for Travel App, reusable wherever the same need appears: calendar export (
 5. Redeploy (and for native: submit the build; remember store review time, and keep the server backwards-compatible with app versions still in use).
 6. Smoke-test on a real phone.
 7. Watch error monitoring for an hour.
+8. Release the changelog: rename `## Unreleased` in `CHANGELOG.md` to today's date (§9).
 
 Any step a person has to do by hand goes into the ROADMAP's "Waiting on you" list until it's done.
 
@@ -494,11 +496,17 @@ Any step a person has to do by hand goes into the ROADMAP's "Waiting on you" lis
 - **PRs:**
   - Small and focused.
   - Each one updates `ROADMAP.md` (and this playbook or the profile, if it taught something).
+  - Each one that changes something a user would notice adds a line under `## Unreleased` in `CHANGELOG.md`.
   - The description is only the content (what changed, how it was checked). **No attribution lines:** no "Requested by" line or link back to the chat or project thread that asked for it, and no "Generated with" tool footer or session link. Leave them out even when a tool's default template adds them.
 - **Commits:**
   - Authored as `{{GIT_AUTHOR}}` (set in each app's `AGENTS.md`).
   - **No `Co-Authored-By` lines.**
   - Short, imperative messages.
+- **Changelog** (`CHANGELOG.md` in each app, newest first):
+  - What shipped and when, in words a user would understand. The ROADMAP holds plans and status; git history and PRs hold developer detail.
+  - Entries start with **Added**, **Changed**, **Fixed** or **Removed**, e.g. "Added: CSV export for Pro". Leave out refactors, tests, docs and dependency bumps unless users notice them.
+  - PRs add lines under `## Unreleased`. At a deploy (§8.2), or at least weekly when every merge deploys, rename it to the date (`## 2026-11-05`) and start a new `## Unreleased`.
+  - Use dates while the app ships continuously on the web. Add version numbers (`## 1.4.0 — 2026-11-05`) once there are store builds, which need them.
 - **Migrations:**
   - One per feature.
   - Named with a sortable timestamp prefix, e.g. `YYYYMMDDHHMMSS_topic`.
@@ -539,6 +547,7 @@ Stack-specific gotchas are in the profile's P8.
 - Design at phone width first. Mock up the system before building screens.
 - Add a kill switch for every paid API, and keep secrets on the server.
 - Record a reason for destructive admin actions, and write the audit entry with them.
+- Add a user-facing changelog line in the same PR as the change.
 
 **Don't**
 - Don't start server-first if offline editing or a native app is likely.
