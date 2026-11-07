@@ -538,6 +538,8 @@ Stack-specific gotchas are in the profile's P8.
 - **Before "fixing" the app for an e2e failure, check the test.** Common causes: native validation blocking submit, a key press with nothing open, a desktop-only label, data left over from another spec.
 - **Tests own their data.** Seed users through the admin API and delete them afterwards. Tests that change app-wide settings run last and put everything back.
 - **`pgrep -f <pattern>` matches its own shell.** Use a PID file or a restart script.
+- **A field that sizes itself from a hidden copy of its text needs the same font settings on both.** Form-control resets often stop inputs inheriting things like tabular digits, so the input draws wider than its copy and clips the last character. Set them on the input explicitly, and check on Safari: Chromium's minimum input width can hide the bug.
+  *Example (Splitly):* the "0.00" amount placeholder lost its last zero on iPhone only.
 
 ---
 
