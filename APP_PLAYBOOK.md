@@ -270,8 +270,11 @@ Model the data with security built in. Every rule here is enforced by the databa
   - Store instants with a time zone (UTC instants).
   - Show them in the **resource's** time zone when it has one (e.g. a trip's or an event's), not the device's. Keep DST-safe helpers in the shared core.
   - Store what's printed on a document as local wall-clock time, e.g. "departs 10:35".
+  - Store a calendar date (a posting date, a due date) in a date-only column, not as a midnight instant, or it can shift a day when read in another zone.
+    *Example (Finance Tracker):* the old app saved some dates as UTC midnight and others as local midnight, so its migration has to repair them.
 - **Money:**
   - Exact decimals (never floats) with a currency code.
+  - Quantities (shares, crypto units) are exact decimals too, with enough places: crypto needs up to 18.
   - Total per currency, and never guess exchange rates.
   - Splits are cent-exact, with minimal settle-up transfers.
 
