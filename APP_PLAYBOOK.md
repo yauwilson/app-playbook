@@ -110,6 +110,7 @@ Pick the backend, hosting and client framework that fit §1.2, then pick (or wri
   - error monitoring with readable stack traces.
 
 *Example (Travel App):* option D web-first, on the [Next.js + Supabase profile](stacks/nextjs-supabase.md).
+*Example (Splitly):* option A, on the [Next.js + Prisma profile](stacks/nextjs-prisma.md), with its own auth and access checks in the data layer.
 
 ### 1.4 Data and sync strategy: server-first or local-first
 
