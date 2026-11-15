@@ -183,6 +183,7 @@ npm run db:reset         # wipe the local database and re-seed
 **Neon / Vercel**
 - **Preview deployments run migrations.** Without a separate database they change the production schema from an unmerged branch. Turn on the Neon integration's "create a database branch for each preview deployment", and check Preview's `DATABASE_URL` is managed by it, not a copy of production's.
 - **Neon's free plan caps a project at 10 branches**, one per previewed git branch. With several PRs a day previews start failing in seconds ("database branch … limit reached"). Turn on "automatically delete obsolete preview branches" in the integration and GitHub's "Automatically delete head branches".
+- **A scheduled job is a `crons` entry in `vercel.json`** calling a GET route. Put `vercel.json` in the project's root directory (`apps/web/` in a monorepo), check `Authorization: Bearer $CRON_SECRET` in constant time, keep the route shut when the secret isn't set, and exclude it from the sign-in proxy. The Hobby plan runs crons at most once a day, so keep an on-demand path ("Try again") too, and never call the network from inside a database transaction.
 - **Neon computes scale to zero.** The first request after idle waits for a cold start; keep Prisma's connect timeout generous and don't treat the first slow query as an outage.
 
 **Sentry**

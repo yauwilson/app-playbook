@@ -221,6 +221,7 @@ Model the data with security built in. Every rule here is enforced by the databa
 - Every table (or collection) gets access rules **in the migration that creates it**.
 - Write rules through helper functions, e.g. `<resource>_role_for(<resource>_id)`, rather than repeating joins.
 - Every rule gets a test: allowed cases *and* denied cases.
+- The exception is reference data that every `<resource>` shares and that holds nobody's information (published exchange rates, a public holiday calendar): a table without the `<resource>` id, written only by server code, and read by people only through their own data. Say so in the schema.
 
 ### 3.2 Lock privileged fields
 
@@ -276,6 +277,8 @@ Model the data with security built in. Every rule here is enforced by the databa
   - Exact decimals (never floats) with a currency code.
   - Quantities (shares, crypto units) are exact decimals too, with enough places: crypto needs up to 18.
   - Total per currency, and never guess exchange rates.
+  - Store a converted amount next to the original, at the rate for the item's date, with that rate, the day it was published and its source. Until that day's rate is final, leave it empty and say what is waiting, rather than borrowing a nearby rate that a later fetch would change.
+    *Example (Finance Tracker):* a transaction from today waits until the central bank's evening rate is out; a Saturday uses Friday's published rate.
   - Splits are cent-exact, with minimal settle-up transfers.
 
 ### 3.8 Tokens and links
@@ -537,6 +540,8 @@ Stack-specific gotchas are in the profile's P8.
 - **A summary screen must compute with the same rule as the detail screen.** If a `<resource>` has a setting that changes how its numbers are worked out, a home or overview screen that recomputes them has to read the same setting through the same function. *Example (Splitly):* Home always simplified debts while the group page respected the group's "simplify debts" setting, so the two named different people as owing you.
 - **Don't nag about something that's only waiting on data still to come.** When an item's answer may arrive with the next import or sync, let it wait quietly: listed, but not counted as needing attention. Cap the wait, so a source that stops updating can't hide the item for ever.
   *Example (Finance Tracker):* a transfer out of chequing waits for the savings account's next import to find its other side, and only goes to the review inbox after 30 days without it.
+- **Cache a third-party series as rows plus one "covered from–to" range per series,** and only grow that range by fetching right up to its edge. Then a missing row means "no value that day" (a weekend), never "not fetched yet", and a fetch for an old date can't leave an unfetched hole inside what looks covered.
+  *Example (Finance Tracker):* the first version fetched only the old dates it needed and extended the range over the years between, so those years looked covered and their transactions converted at the wrong rate.
 - **Refresh every view of changed data, not just the current screen,** or other tabs and feeds show stale data until their cache expires.
 - **A cleared required text field:** store an empty string, not null, and save a whole settings form in one write; a null once caused a partial save.
 - **"Works locally, fails on hosted"** is usually an unapplied migration, a missing config value, or a function that exists locally but not in the hosted database. CI on a fresh database catches the first and third.
