@@ -195,6 +195,7 @@ npm run db:reset         # wipe the local database and re-seed
 - **Specs that change app-wide settings run last** in a `settings` project with `dependencies`; settings that break every other spec (pausing sign-ups, a banner on every page) go in an `exclusive` project after it, `mode: "serial"`, restoring values in `afterAll`.
 - **Saves through the outbox finish in the background.** Wait for the server-rendered row, not the optimistic one.
 - **To forge a hidden form field in an access test** (another `<resource>`'s id in your own edit form), set it right before the click that submits. React writes a controlled input's `value` back on any re-render, so a value set before opening a confirmation is silently restored and the test acts on your own row.
+- **`getByRole` can't see inside a closed `<details>`** (it's hidden from the accessibility tree). Click its `<summary>` first. And `getByText(…).last()` can land on a hidden `<option>` with the same text, so scope to a region or role instead.
 - **Repeat, don't retry:** `playwright test -g "name" --repeat-each 60 --workers 4`.
 
 ## P9. New app checklist: stack steps
