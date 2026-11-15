@@ -38,6 +38,8 @@ The **how** for the [App Playbook](../APP_PLAYBOOK.md) on this stack. Section nu
   - writes: `assertMember(<resource>Id, userId)` before any mutation, and child rows are looked up *through* the `<resource>` they belong to, never by id alone;
   - screens, Server Actions and API routes call these functions, never `db` directly; `db` and the data layer import `server-only`.
 - **Access-rule tests:** with no database-level rules, test them end to end. A second user calls every `<resource>`-scoped page, Server Action and API route with valid payloads, on the paid plan (so a plan gate can't hide a missing membership check), and expects 404/403 (`e2e/access.spec.ts`). Add a case for every new table or route.
+- **Data-layer access tests:** also call every membership-scoped service directly as a non-member, against a real migrated database, and check it throws and nothing changed (a `*.db.test.ts` vitest config, run after `prisma migrate deploy` in the migrations CI job). They're fast, cover writes a page can't reach, and fail on the exact function that lost its check.
+  *Example (Finance Tracker):* `access.db.test.ts` covers create, update, close, reopen and delete of accounts, plus a member whose membership was removed.
 - **Locked columns:** there is no column-level grant, so lock them in code. Profile updates go through a zod schema that lists only editable fields (never spread form data into `update`). Only billing and admin code write `plan`, `compPlan*`, `adminRole`, `suspendedAt`.
 - **Entitlements:** core `plans.ts`: `planOf(user)` resolves billing plan and admin comp (`compPlan`, `compPlanUntil`); `can(plan, feature)` and `limit(plan, key)` for every gate, in the UI and again in the Server Action or API route. Move the matrix to `plan_features` / `entitlement_overrides` tables when plans need changing without a deploy, with a unit test that the seed matches the code fallback.
 - **App settings:** an `AppSetting` table (`key`, JSON `value`, `description`). Default rows are inserted by the migration that introduces them (`INSERT … ON CONFLICT ("key") DO NOTHING`), so production gets them without a seed step. Readers parse with a typed defaults map and fall back to it if a row is missing (`lib/settings-parse.ts`), wrapped in React `cache()`.
@@ -70,7 +72,7 @@ The **how** for the [App Playbook](../APP_PLAYBOOK.md) on this stack. Section nu
   - passwords with `bcryptjs` (cost 12), and a dummy hash compare for unknown emails so timing doesn't reveal accounts;
   - sessions in a `Session` table storing only the SHA-256 of a random token; the cookie is `httpOnly`, `sameSite: "lax"`, `secure` in production; `lastSeenAt` touched at most hourly; a list of devices and "sign out other devices";
   - `getSession` / `getCurrentUser` wrapped in React `cache()`; `requireUser()` redirects to `/login`; suspended users get no session;
-  - `middleware.ts` only checks the cookie *exists* (redirects to `/login?next=…`); real validation happens in `requireUser()`.
+  - `middleware.ts` (`proxy.ts` from Next.js 16) only checks the cookie *exists* (redirects to `/login?next=…`); real validation happens in `requireUser()`.
 - **Two-factor (admin):** TOTP from `node:crypto` (RFC 6238, ~40 lines, `lib/totp.ts`) tested against the RFC vectors; QR as SVG from `qrcode` on the server; per-session `adminVerifiedAt` and a failure counter.
 - **Data layer:** `lib/data.ts` (reads) and `lib/*-service.ts` (writes shared by Server Actions and API routes), all membership-scoped (P2). Pages call these, start independent queries with `Promise.all`.
 - **Server Actions** return a `FormState` (`{ error?, ok?, message? }`), never throw for user errors; validate with zod; re-check `can()` / `limit()`; call `revalidatePath("/", "layout")` (or the `<resource>` layout) after changing `<resource>` data.
@@ -119,6 +121,7 @@ The **how** for the [App Playbook](../APP_PLAYBOOK.md) on this stack. Section nu
 | Unit | vitest | next to the code (`lib/*.test.ts`) or `packages/core` |
 | Migrations | `prisma migrate deploy` on an empty database + drift check | CI |
 | Access rules | Playwright, second-user deny cases | `e2e/access.spec.ts` |
+| Data-layer access | vitest against a migrated database | `*.db.test.ts`, CI migrations job |
 | End to end | Playwright | `e2e/` |
 | Static | `tsc --noEmit`, `eslint`, `next build` | every push |
 
@@ -158,6 +161,7 @@ npm run db:reset         # wipe the local database and re-seed
 
 **Next.js / React:** the Next.js gotchas in profile `nextjs-supabase` P8 apply here too (form reset after actions, the parked router update, `revalidatePath(…, "layout")`, portals for overlays, `**/` in CSS comments, Vercel's Framework Preset).
 
+- **Next.js 16 renamed `middleware.ts` to `proxy.ts`,** exporting `proxy` instead of `middleware`. The old name still runs but is deprecated; the build lists it as "Proxy (Middleware)".
 - **The middleware redirects signed-out API calls to `/login` (307) before the route runs**, so a client expecting 401 gets HTML. Either exclude those routes from the matcher and return 401 in the route, or treat a redirect as "signed out". In tests, use `maxRedirects: 0`.
 - **The service worker only runs in production builds.** Add an opt-in flag (e.g. `NEXT_PUBLIC_ENABLE_SW=1`) to test it under `next dev`, and run e2e against `next start`.
 
@@ -187,6 +191,7 @@ npm run db:reset         # wipe the local database and re-seed
 - **Seed users through the app or Prisma with a test-only email domain** (e.g. `@e2e.<app>.test`) and delete them in `globalTeardown`.
 - **Specs that change app-wide settings run last** in a `settings` project with `dependencies`; settings that break every other spec (pausing sign-ups, a banner on every page) go in an `exclusive` project after it, `mode: "serial"`, restoring values in `afterAll`.
 - **Saves through the outbox finish in the background.** Wait for the server-rendered row, not the optimistic one.
+- **To forge a hidden form field in an access test** (another `<resource>`'s id in your own edit form), set it right before the click that submits. React writes a controlled input's `value` back on any re-render, so a value set before opening a confirmation is silently restored and the test acts on your own row.
 - **Repeat, don't retry:** `playwright test -g "name" --repeat-each 60 --workers 4`.
 
 ## P9. New app checklist: stack steps
@@ -199,7 +204,7 @@ Matches the playbook's §12 numbering.
 - **12.** Vercel: Framework Preset Next.js, the `vercel-build` script (P7), auto-delete of preview branches in Neon and of head branches in GitHub.
 - **13–15.** First migration: `User` with `plan`, `compPlan*`, `adminRole`; `Session`; `<resource>` and its members; `deletedAt` (and `version`) on synced tables. Then `AppSetting` with default rows, the append-only audit table, `plans.ts`, and the second-user access spec.
 - **17.** Copy `globals.css` tokens, `tailwind.config.ts`, `lib/preferences.ts` and the theme script in `app/layout.tsx`; rename palettes and brand.
-- **18.** Copy `lib/auth.ts`, `lib/db.ts`, `middleware.ts`, `lib/money.ts`, `Sheet`, `SubmitButton`, `ConfirmButton`, error screens.
+- **18.** Copy `lib/auth.ts`, `lib/db.ts`, `middleware.ts` (`proxy.ts` on Next.js 16), `lib/money.ts`, `Sheet`, `SubmitButton`, `ConfirmButton`, error screens.
 - **19.** `lib/data.ts` and services with membership checks; an idempotent upload route and the outbox if offline edits are needed.
 - **20.** App shell with tab bar and sidebar, `error.tsx` per route group.
 - **21.** Manifest, `sw.js` (bump `VERSION`, set never-cached paths), `SyncManager` and banners.
