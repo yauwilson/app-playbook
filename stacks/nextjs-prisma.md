@@ -163,6 +163,7 @@ npm run db:reset         # wipe the local database and re-seed
 
 - **Next.js 16 renamed `middleware.ts` to `proxy.ts`,** exporting `proxy` instead of `middleware`. The old name still runs but is deprecated; the build lists it as "Proxy (Middleware)".
 - **The middleware redirects signed-out API calls to `/login` (307) before the route runs**, so a client expecting 401 gets HTML. Either exclude those routes from the matcher and return 401 in the route, or treat a redirect as "signed out". In tests, use `maxRedirects: 0`.
+- **Server Actions reject bodies over 1 MB by default**, so sending a file's contents (a CSV import) to an action fails on bigger files with a vague error. Raise `experimental.serverActions.bodySizeLimit` in `next.config.ts`, and cap the size in the action's zod schema too.
 - **The service worker only runs in production builds.** Add an opt-in flag (e.g. `NEXT_PUBLIC_ENABLE_SW=1`) to test it under `next dev`, and run e2e against `next start`.
 
 **Prisma**
@@ -170,6 +171,8 @@ npm run db:reset         # wipe the local database and re-seed
 - **One `PrismaClient` per process:** keep it on `globalThis` in development (`lib/db.ts`), or hot reload opens a new pool each edit and exhausts connections.
 - **`prisma generate` must run before `next build` and before `tsc` in CI**, since the client isn't committed.
 - **`migrate dev` needs a shadow database.** Locally it creates one; in CI create it yourself for the drift check (`CREATE DATABASE <name>_shadow`).
+- **`createMany` returns no ids.** When other rows must point at the rows being inserted (kept original rows → the records they created), make the ids in the app (`crypto.randomUUID()`) rather than one `create` per row.
+- **A "check for duplicates, then insert" write races with itself.** Lock the `<resource>` row first inside the transaction (`SELECT id FROM "<Resource>" WHERE id = $1 FOR UPDATE` via `tx.$queryRaw`) so two concurrent writes can't both pass the check.
 - **Unique-constraint races surface as `P2002`.** Catch it where a retry is expected (idempotent `clientId` uploads) and return the existing row.
 - **The `DATABASE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}"` swap only works where the variables are in the shell** (Vercel, CI). Locally they live in `.env`, which the shell never reads, so the swap sets `DATABASE_URL` to an empty string and Prisma fails. Keep it in `vercel-build` only, or use `directUrl`.
   *Example (Finance Tracker):* `db:setup` failed locally with the swap and worked once the datasource had `directUrl`.
