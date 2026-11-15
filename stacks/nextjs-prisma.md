@@ -22,7 +22,7 @@ The **how** for the [App Playbook](../APP_PLAYBOOK.md) on this stack. Section nu
 - **Region:** Vercel functions in the same region as the Neon project.
 - **Connection strings** (both set by Vercel's Neon integration):
   - `DATABASE_URL`: pooled (PgBouncer, `-pooler` host). The app uses it, so serverless functions don't exhaust connections.
-  - `DATABASE_URL_UNPOOLED`: direct. Migrations use it, since they need a session-level connection. Either set `directUrl = env("DATABASE_URL_UNPOOLED")` in the datasource, or swap the variable in the build script as Splitly does (P7).
+  - `DATABASE_URL_UNPOOLED`: direct. Migrations use it, since they need a session-level connection. Either set `directUrl = env("DATABASE_URL_UNPOOLED")` in the datasource, or swap the variable in the build script as Splitly does (P7). Use `directUrl` for any script that also runs locally (P8).
 - **CI** (`.github/workflows/ci.yml`), three checks, each with a Postgres 16 service container:
   - "Lint, typecheck, unit tests": `prisma generate`, `eslint .`, `tsc --noEmit`, `vitest run`;
   - "Migrations on a fresh database": `prisma migrate deploy` on an empty database, the production seed, then the drift check (P2);
@@ -167,6 +167,9 @@ npm run db:reset         # wipe the local database and re-seed
 - **`prisma generate` must run before `next build` and before `tsc` in CI**, since the client isn't committed.
 - **`migrate dev` needs a shadow database.** Locally it creates one; in CI create it yourself for the drift check (`CREATE DATABASE <name>_shadow`).
 - **Unique-constraint races surface as `P2002`.** Catch it where a retry is expected (idempotent `clientId` uploads) and return the existing row.
+- **The `DATABASE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}"` swap only works where the variables are in the shell** (Vercel, CI). Locally they live in `.env`, which the shell never reads, so the swap sets `DATABASE_URL` to an empty string and Prisma fails. Keep it in `vercel-build` only, or use `directUrl`.
+  *Example (Finance Tracker):* `db:setup` failed locally with the swap and worked once the datasource had `directUrl`.
+- **pnpm 10 skips dependency install scripts unless allowed,** so Prisma's engines and `@sentry/cli` don't set themselves up. List `@prisma/client`, `@prisma/engines`, `prisma`, `esbuild` and `@sentry/cli` under `onlyBuiltDependencies` in `pnpm-workspace.yaml`.
 - **Triggers, partial indexes and seed rows aren't in `schema.prisma`.** Add them by hand to the generated `migration.sql`; the drift check ignores them, so cover them with a test.
 
 **Neon / Vercel**
